@@ -18,6 +18,20 @@ db.init_app(app)
 
 api = Api(app)
 
+@app.before_request
+def check_if_logged_in():
+    open_access_list = [
+        'clear',
+        'article_list',
+        'show_article',
+        'login',
+        'logout',
+        'check_session'
+    ]
+
+    if (request.endpoint) not in open_access_list and (not session.get('user_id')):
+        return {'error': '401 Unauthorized'}, 401
+
 class ClearSession(Resource):
 
     def delete(self):
@@ -59,7 +73,6 @@ class Login(Resource):
         user = User.query.filter(User.username == username).first()
 
         if user:
-        
             session['user_id'] = user.id
             return user.to_dict(), 200
 
@@ -87,12 +100,15 @@ class CheckSession(Resource):
 class MemberOnlyIndex(Resource):
     
     def get(self):
-        pass
+        articles =[article.to_dict() for article in Article.query.filter(Article.is_member_only == 1)]
+        return make_response(jsonify(articles), 200)
+        
 
 class MemberOnlyArticle(Resource):
     
     def get(self, id):
-        pass
+        article =(Article.query.filter(Article.id == id).first()).to_dict()
+        return make_response(article,200)
 
 api.add_resource(ClearSession, '/clear', endpoint='clear')
 api.add_resource(IndexArticle, '/articles', endpoint='article_list')
